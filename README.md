@@ -1,1 +1,1 @@
-# ConcentrationOnFarming
+It's a Stardew Valley's mod that adds many unbalanced(?) functions 
