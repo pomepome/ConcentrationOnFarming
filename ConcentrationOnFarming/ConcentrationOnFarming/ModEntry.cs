@@ -18,6 +18,8 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.InteropServices;
 
+using static ConcentrationOnFarming.Util;
+
 namespace ConcentrationOnFarming
 {
     using SVObject = StardewValley.Object;
@@ -25,6 +27,8 @@ namespace ConcentrationOnFarming
 
     public class ModEntry : Mod
     {
+        public static readonly string VERSION = "1.0.2";
+
         Config config = null;
 
         private uint tickCount;
@@ -45,6 +49,10 @@ namespace ConcentrationOnFarming
             }
             helper.WriteConfig(config);
             
+            if(config.CheckUpdate)
+            {
+                UpdateChecker.CheckUpdate(Monitor);
+            }
 
             GameEvents.UpdateTick += onGameTick;
             GameEvents.SecondUpdateTick += OnUpdate;
@@ -77,7 +85,7 @@ namespace ConcentrationOnFarming
             }
             if (config.AutokillEnemies)
             {
-                Util.KillEnemies(player, this);
+                KillEnemies(player, this);
             }
             if(config.AutoSave)
             {
@@ -98,7 +106,7 @@ namespace ConcentrationOnFarming
                     {
                         BobberBar bar = (BobberBar)clickableManu;
 
-                        if ((float)Util.GetPrivateValue(bar, "scale") <= 0f)
+                        if ((float)GetPrivateValue(bar, "scale") <= 0f)
                         {
 
                             int random = new Random().Next() % 100;
@@ -109,15 +117,15 @@ namespace ConcentrationOnFarming
                             {
                                 //Treasure caught!
                                 Monitor.Log("Treasure Caught!");
-                                Util.SetPrivateValue(bar, "treasureCaught", true);
+                                SetPrivateValue(bar, "treasureCaught", true);
                             }
 
                         }
                         else
                         {
-                            Util.SetPrivateValue(bar, "fadeOut", true);
-                            Util.SetPrivateValue(bar, "perfect", true);
-                            Util.SetPrivateValue(bar, "distanceFromCatching", 10);
+                            SetPrivateValue(bar, "fadeOut", true);
+                            SetPrivateValue(bar, "perfect", true);
+                            SetPrivateValue(bar, "distanceFromCatching", 10);
                         }
                     }
                 }
@@ -147,19 +155,19 @@ namespace ConcentrationOnFarming
                 {
                     FishingRod rod = (FishingRod)CurrentTool;
 
-                    int whichFish = (int)Util.GetPrivateValue(rod, "whichFish");
+                    int whichFish = (int)GetPrivateValue(rod, "whichFish");
 
                     if(!IsFish(whichFish))
                     {
-                        Util.SetPrivateValue(rod, "whichFish", getNextFish(player.currentLocation, rod));
-                        Vector2 bobber = (Vector2)Util.GetPrivateValue(rod, "bobber");
+                        SetPrivateValue(rod, "whichFish", GetNextFish(player.currentLocation, rod));
+                        Vector2 bobber = (Vector2)GetPrivateValue(rod, "bobber");
                         Game1.screenOverlayTempSprites.Clear();
                         Game1.screenOverlayTempSprites.Add(new TemporaryAnimatedSprite(Game1.mouseCursors, new Rectangle(612, 1913, 74, 30), 1500f, 1, 0, Game1.GlobalToLocal(Game1.viewport, bobber + new Vector2(-140f, (float)(-(float)Game1.tileSize * 5 / 2))), false, false, 1f, 0.005f, Color.White, 4f, 0.075f, 0f, 0f, true)
                         {
                             scaleChangeChange = -0.005f,
                             motion = new Vector2(0f, -0.1f),
                             endFunction = new TemporaryAnimatedSprite.endBehavior(rod.startMinigameEndFunction),
-                            extraInfoForEndBehavior = (int)Util.GetPrivateValue(rod, "whichFish")
+                            extraInfoForEndBehavior = (int)GetPrivateValue(rod, "whichFish")
                         });
                     }
                 }
@@ -214,14 +222,14 @@ namespace ConcentrationOnFarming
             }
             if (isSpecialKeyPerformed)
             {
-                if (isAllKeyUp(Keys.P, Keys.U, Keys.N, Keys.Y, Keys.O))
+                if (IsAllKeyUp(Keys.P, Keys.U, Keys.N, Keys.Y, Keys.O))
                 {
                     isSpecialKeyPerformed = false;
                 }
             }
             else
             {
-                if (isAllKeyDown(Keys.P, Keys.U, Keys.N, Keys.Y, Keys.O))
+                if (IsAllKeyDown(Keys.P, Keys.U, Keys.N, Keys.Y, Keys.O))
                 {
                     isSpecialKeyPerformed = true;
                     Game1.player.addItemToInventory(new SVObject(SVObject.prismaticShardIndex,100));
@@ -245,14 +253,14 @@ namespace ConcentrationOnFarming
                 {
                     TerrainFeature feature = features[loc];
 
-                    if(!(feature is Tree))
+                    if(feature == null || !(feature is Tree))
                     {
                         continue;
                     }
 
                     Rectangle bb = ExpandBoundingBox(player.GetBoundingBox(), 1000, 1000);
 
-                    if(feature.getBoundingBox(loc).Intersects(bb))
+                    if(feature.getBoundingBox(loc).Intersects(bb) && NullCheck(player.CurrentTool, loc, location))
                     {
                         feature.performToolAction(player.CurrentTool, 0, loc, location);
                     }
@@ -268,16 +276,16 @@ namespace ConcentrationOnFarming
             return new Rectangle(parent.X - dx, parent.Y - dy, parent.Width + 2 * dx, parent.Height + 2 * dy);
         }
 
-        private bool isKeyDown(Keys key)
+        private bool IsKeyDown(Keys key)
         {
             return Keyboard.GetState().IsKeyDown(key);
         }
 
-        private bool isAllKeyDown(params Keys[] keys)
+        private bool IsAllKeyDown(params Keys[] keys)
         {
             foreach(Keys key in keys)
             {
-                if(!isKeyDown(key))
+                if(!IsKeyDown(key))
                 {
                     return false;
                 }
@@ -285,11 +293,11 @@ namespace ConcentrationOnFarming
             return true;
         }
 
-        private bool isAllKeyUp(params Keys[] keys)
+        private bool IsAllKeyUp(params Keys[] keys)
         {
             foreach (Keys key in keys)
             {
-                if (isKeyDown(key))
+                if (IsKeyDown(key))
                 {
                     return false;
                 }
@@ -297,11 +305,11 @@ namespace ConcentrationOnFarming
             return true;
         }
 
-        private int getNextFish(GameLocation location, FishingRod rod)
+        private int GetNextFish(GameLocation location, FishingRod rod)
         {
             int clearWaterDistance = (int)Util.GetPrivateValue(rod, "clearWaterDistance");
-            StardewValley.Farmer lastUser = (StardewValley.Farmer)Util.GetPrivateValue(rod, "lastUser");
-            Vector2 bobber = (Vector2)Util.GetPrivateValue(rod, "bobber");
+            Player lastUser = (Player)Util.GetPrivateValue(rod, "lastUser");
+            Vector2 bobber = (Vector2)GetPrivateValue(rod, "bobber");
             double num3 = (rod.attachments[0] != null) ? rod.attachments[0].Price / 10f : 0f;
 
             Rectangle rectangle2 = new Rectangle(location.fishSplashPoint.X * Game1.tileSize, location.fishSplashPoint.Y * Game1.tileSize, Game1.tileSize, Game1.tileSize);
@@ -312,7 +320,7 @@ namespace ConcentrationOnFarming
 
             if(!IsFish(@object.ParentSheetIndex))
             {
-                return getNextFish(location, rod);
+                return GetNextFish(location, rod);
             }
             return @object.ParentSheetIndex;
         }
@@ -329,6 +337,17 @@ namespace ConcentrationOnFarming
 
     internal class Util
     {
+        public static bool NullCheck(params object[] objs)
+        {
+            foreach(object obj in objs)
+            {
+                if(obj == null)
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
 
         public static void SetPrivateValue(object obj, string name, object value)
         {
@@ -406,6 +425,7 @@ namespace ConcentrationOnFarming
                     Stats expr_6F8 = Game1.stats;
                     uint monstersKilled = expr_6F8.MonstersKilled;
                     expr_6F8.MonstersKilled = monstersKilled + 1u;
+
                 }
             }
         }
