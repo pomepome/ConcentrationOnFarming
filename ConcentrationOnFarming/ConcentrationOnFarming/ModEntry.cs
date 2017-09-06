@@ -27,7 +27,7 @@ namespace ConcentrationOnFarming
 
     public class ModEntry : Mod
     {
-        public static readonly string VERSION = "1.0.2";
+        public static readonly string VERSION = "1.0.3";
 
         Config config = null;
 
@@ -49,18 +49,23 @@ namespace ConcentrationOnFarming
             }
             helper.WriteConfig(config);
             
+            if(!config.Enabled)
+            {
+                return;
+            }
+
             if(config.CheckUpdate)
             {
                 UpdateChecker.CheckUpdate(Monitor);
             }
 
-            GameEvents.UpdateTick += onGameTick;
+            GameEvents.UpdateTick += OnGameTick;
             GameEvents.SecondUpdateTick += OnUpdate;
 
             ControlEvents.KeyPressed += OnKeyPressed;
         }
 
-        private void onGameTick(object sender, EventArgs args)
+        private void OnGameTick(object sender, EventArgs args)
         {
             if(!Context.IsWorldReady || !config.Enabled)
             {
@@ -308,7 +313,7 @@ namespace ConcentrationOnFarming
         private int GetNextFish(GameLocation location, FishingRod rod)
         {
             int clearWaterDistance = (int)Util.GetPrivateValue(rod, "clearWaterDistance");
-            Player lastUser = (Player)Util.GetPrivateValue(rod, "lastUser");
+            Player lastUser = (Player)GetPrivateValue(rod, "lastUser");
             Vector2 bobber = (Vector2)GetPrivateValue(rod, "bobber");
             double num3 = (rod.attachments[0] != null) ? rod.attachments[0].Price / 10f : 0f;
 
@@ -337,6 +342,8 @@ namespace ConcentrationOnFarming
 
     internal class Util
     {
+        private static Dictionary<string, FieldInfo> fieldsCached = new Dictionary<string, FieldInfo>();
+
         public static bool NullCheck(params object[] objs)
         {
             foreach(object obj in objs)
@@ -351,13 +358,28 @@ namespace ConcentrationOnFarming
 
         public static void SetPrivateValue(object obj, string name, object value)
         {
-            Type type = obj.GetType();
-            type.GetField(name, BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic).SetValue(obj, value);
+            GetField(obj, name).SetValue(obj, value);
         }
         public static object GetPrivateValue(object obj, string name)
         {
+            return GetField(obj, name).GetValue(obj);
+        }
+
+        public static FieldInfo GetField(object obj, string name)
+        {
+            if(obj == null)
+            {
+                throw new ArgumentNullException("paramater obj cannot be null.");
+            }
             Type type = obj.GetType();
-            return type.GetField(name, BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic).GetValue(obj);
+            string key = type.FullName + "." + name;
+            if(fieldsCached.ContainsKey(key))
+            {
+                return fieldsCached[key];
+            }
+            FieldInfo info = type.GetField(name, BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic);
+            fieldsCached.Add(key, info);
+            return info;
         }
 
         public static void KillEnemies(Player player, ModEntry main)
