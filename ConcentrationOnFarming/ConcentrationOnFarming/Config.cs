@@ -22,6 +22,7 @@ namespace ConcentrationOnFarming
         public bool AutoWateringCrops { get; set; } = false;
         public bool InstantGrowTree { get; set; } = false;
         public bool FastMachineProcessing { get; set; } = false;
-        public bool CutNearbyWood { get; set; } = false;
+        public bool UseToolsNearby { get; set; } = false;
+        public bool MagnetDropItems { get; set; } = false;
     }
 }
